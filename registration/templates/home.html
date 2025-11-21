@@ -1,23 +1,166 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<head>
+    <title>Home – Smart Resume Matcher</title>
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
 
-    <title>Home Page</title>
-  </head>
-  <body>
-    <h1>Home Page</h1>
-    <a href="{% url 'logout' %}" class="btn btn-primary">Logout</a>
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:'Poppins',sans-serif;
+        }
+        body{
+            background:#080710;
+            color:white;
+        }
+        .background{
+            width:430px;
+            height:520px;
+            position:absolute;
+            transform:translate(-50%,-50%);
+            left:50%;
+            top:50%;
+            z-index:-1;
+        }
+        .background .shape{
+            height:200px;
+            width:200px;
+            border-radius:50%;
+            position:absolute;
+        }
+        .shape:first-child{
+            background:linear-gradient(#1845ad,#23a2f6);
+            left:-80px;
+            top:-80px;
+        }
+        .shape:last-child{
+            background:linear-gradient(to right,#ff512f,#f09819);
+            right:-30px;
+            bottom:-80px;
+        }
 
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-  </body>
+        .container-box{
+            width:850px;
+            margin:50px auto;
+            background:rgba(255,255,255,0.13);
+            padding:30px;
+            border-radius:15px;
+            border:2px solid rgba(255,255,255,0.1);
+            backdrop-filter:blur(15px);
+            box-shadow:0 0 40px rgba(8,7,16,0.6);
+        }
+
+        h2{
+            text-align:center;
+            margin-bottom:20px;
+            font-weight:600;
+        }
+
+        label{
+            margin-top:15px;
+            display:block;
+            font-size:15px;
+            font-weight:500;
+        }
+        input, textarea{
+            width:100%;
+            padding:12px;
+            border-radius:5px;
+            margin-top:5px;
+            background:rgba(255,255,255,0.07);
+            color:white;
+            border:none;
+        }
+        button{
+            margin-top:20px;
+            width:100%;
+            padding:12px;
+            background:white;
+            color:#080710;
+            border-radius:5px;
+            font-size:18px;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .logout-btn{
+            display:block;
+            text-align:right;
+            margin-bottom:20px;
+        }
+        .logout-btn a{
+            color:white;
+            background:#ff512f;
+            padding:8px 15px;
+            text-decoration:none;
+            border-radius:5px;
+            font-weight:500;
+        }
+
+        .result-box{
+            margin-top:30px;
+            padding:20px;
+            background:rgba(255,255,255,0.12);
+            border-radius:10px;
+        }
+        .score{
+            font-size:35px;
+            font-weight:700;
+            color:#23a2f6;
+        }
+        .suggestions{
+            margin-top:10px;
+            white-space:pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background">
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+
+    <div class="container-box">
+
+        <div class="logout-btn">
+            <a href="{% url 'logout' %}">Logout</a>
+        </div>
+
+        <h2>Smart Resume & Job Description Matcher</h2>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <label>Resume (PDF)</label>
+            {{ form.resume_file }}
+
+            <label>Job Description</label>
+            {{ form.job_description }}
+
+            <button type="submit">Match</button>
+        </form>
+
+        {% if result %}
+        <div class="result-box">
+            <h3>Match Result</h3>
+            <div class="score">{{ result.match_score }}%</div>
+            <p><b>Suggestions:</b></p>
+            <div class="suggestions">{{ result.suggestions }}</div>
+        </div>
+
+        {% elif last_result %}
+        <div class="result-box">
+            <h3>Last Result</h3>
+            <div class="score">{{ last_result.match_score }}%</div>
+            <p><b>Suggestions:</b></p>
+            <div class="suggestions">{{ last_result.suggestions }}</div>
+        </div>
+
+        {% endif %}
+    </div>
+
+</body>
 </html>

@@ -121,3 +121,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# At end of registration/settings.py (add these lines)
+STATIC_URL = 'static/'
+
+# Media (for uploaded resumes)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# keep DEFAULT_AUTO_FIELD etc
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
