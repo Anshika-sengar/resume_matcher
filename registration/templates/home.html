@@ -1,166 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Home – Smart Resume Matcher</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Matcher</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
 
-    <style>
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-            font-family:'Poppins',sans-serif;
-        }
-        body{
-            background:#080710;
-            color:white;
-        }
-        .background{
-            width:430px;
-            height:520px;
-            position:absolute;
-            transform:translate(-50%,-50%);
-            left:50%;
-            top:50%;
-            z-index:-1;
-        }
-        .background .shape{
-            height:200px;
-            width:200px;
-            border-radius:50%;
-            position:absolute;
-        }
-        .shape:first-child{
-            background:linear-gradient(#1845ad,#23a2f6);
-            left:-80px;
-            top:-80px;
-        }
-        .shape:last-child{
-            background:linear-gradient(to right,#ff512f,#f09819);
-            right:-30px;
-            bottom:-80px;
-        }
+  <style>
+    *,
+    *::before,
+    *::after {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
 
-        .container-box{
-            width:850px;
-            margin:50px auto;
-            background:rgba(255,255,255,0.13);
-            padding:30px;
-            border-radius:15px;
-            border:2px solid rgba(255,255,255,0.1);
-            backdrop-filter:blur(15px);
-            box-shadow:0 0 40px rgba(8,7,16,0.6);
-        }
+    body {
+      background-color: #080710;
+      min-height: 100vh;
+      padding: 40px 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-direction: column;
+      color: white;
+    }
 
-        h2{
-            text-align:center;
-            margin-bottom:20px;
-            font-weight:600;
-        }
+    /* BEAUTIFUL LOGOUT BUTTON */
+    .logout-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 22px;
+      border-radius: 30px;
+      background: rgba(255, 80, 80, 0.85);
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 12px rgba(255, 80, 80, 0.6);
+      transition: 0.3s;
+    }
 
-        label{
-            margin-top:15px;
-            display:block;
-            font-size:15px;
-            font-weight:500;
-        }
-        input, textarea{
-            width:100%;
-            padding:12px;
-            border-radius:5px;
-            margin-top:5px;
-            background:rgba(255,255,255,0.07);
-            color:white;
-            border:none;
-        }
-        button{
-            margin-top:20px;
-            width:100%;
-            padding:12px;
-            background:white;
-            color:#080710;
-            border-radius:5px;
-            font-size:18px;
-            font-weight:600;
-            cursor:pointer;
-        }
-        .logout-btn{
-            display:block;
-            text-align:right;
-            margin-bottom:20px;
-        }
-        .logout-btn a{
-            color:white;
-            background:#ff512f;
-            padding:8px 15px;
-            text-decoration:none;
-            border-radius:5px;
-            font-weight:500;
-        }
+    .logout-btn:hover {
+      background: rgba(255, 45, 45, 1);
+      transform: scale(1.08);
+      box-shadow: 0 0 18px rgba(255, 80, 80, 0.9);
+    }
 
-        .result-box{
-            margin-top:30px;
-            padding:20px;
-            background:rgba(255,255,255,0.12);
-            border-radius:10px;
-        }
-        .score{
-            font-size:35px;
-            font-weight:700;
-            color:#23a2f6;
-        }
-        .suggestions{
-            margin-top:10px;
-            white-space:pre-wrap;
-        }
-    </style>
+    .background {
+      width: 430px;
+      height: 520px;
+      position: fixed;
+      transform: translate(-50%, -50%);
+      left: 50%;
+      top: 40%;
+      z-index: -1;
+    }
+
+    .background .shape {
+      height: 200px;
+      width: 200px;
+      position: absolute;
+      border-radius: 50%;
+    }
+
+    .shape:first-child {
+      background: linear-gradient(#1845ad, #23a2f6);
+      left: -80px;
+      top: -80px;
+    }
+
+    .shape:last-child {
+      background: linear-gradient(to right, #ff512f, #f09819);
+      right: -30px;
+      bottom: -80px;
+    }
+
+    .container {
+      width: 600px;
+      padding: 30px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 40px rgba(8, 7, 16, 0.6);
+      margin: auto;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      font-size: 28px;
+      font-weight: 600;
+      color: white;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      margin-top: 15px;
+      border-radius: 10px;
+      padding: 10px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+    }
+
+    .upload-area {
+      margin-top: 20px;
+      padding: 20px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .upload-area:hover {
+      border-color: #23a2f6;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 15px;
+      border-radius: 10px;
+      border: none;
+      background: #23a2f6;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1845ad;
+    }
+
+    .msg {
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    .success {
+      color: #00ffae;
+    }
+
+    .error {
+      color: #ff4d4d;
+    }
+
+    .image-preview {
+      margin-top: 30px;
+      width: 100%;
+    }
+
+    .image-preview img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+  </style>
 </head>
 
 <body>
-    <div class="background">
-        <div class="shape"></div>
-        <div class="shape"></div>
+
+  <!-- LOGOUT BUTTON -->
+  <a href="/logout/" class="logout-btn">Logout</a>
+
+  <div class="background">
+    <div class="shape"></div>
+    <div class="shape"></div>
+  </div>
+
+  <div class="container">
+
+    <h2>Smart Resume Matcher</h2>
+    <p>Upload Resume (PDF / DOC / DOCX) + Job Description</p>
+
+    <form action="" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="upload-area" onclick="document.getElementById('resumeInput').click()">
+        <strong>Click here to upload resume</strong>
+      </div>
+
+      <input type="file" name="resume_file" id="resumeInput" accept=".pdf,.doc,.docx" />
+
+      <p class="msg" id="fileMsg"></p>
+
+      <textarea name="job_description" placeholder="Paste Job Description here..." required></textarea>
+
+      <button type="submit">Match Resume</button>
+    </form>
+
+    {% if result %}
+    <hr style="margin-top:20px; border-color:white;">
+    <h2>Match Score: {{ result.match_score }}%</h2>
+    <p>Missing Keywords: {{ result.suggestions }}</p>
+    {% endif %}
+
+    {% if images %}
+    <div class="image-preview">
+      <h2>Resume Preview</h2>
+      {% for img in images %}
+      <img src="{{ img }}" alt="Resume Image">
+      {% endfor %}
     </div>
+    {% endif %}
 
-    <div class="container-box">
+  </div>
 
-        <div class="logout-btn">
-            <a href="{% url 'logout' %}">Logout</a>
-        </div>
+  <script>
+    const input = document.getElementById("resumeInput");
+    const fileMsg = document.getElementById("fileMsg");
 
-        <h2>Smart Resume & Job Description Matcher</h2>
+    input.addEventListener("change", () => {
+      const file = input.files[0];
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+      if (!file) return;
 
-            <label>Resume (PDF)</label>
-            {{ form.resume_file }}
+      const allowed = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ];
 
-            <label>Job Description</label>
-            {{ form.job_description }}
+      if (!allowed.includes(file.type)) {
+        fileMsg.className = "msg error";
+        fileMsg.innerText = "❌ Only PDF/DOC/DOCX files allowed!";
+        input.value = "";
+        return;
+      }
 
-            <button type="submit">Match</button>
-        </form>
-
-        {% if result %}
-        <div class="result-box">
-            <h3>Match Result</h3>
-            <div class="score">{{ result.match_score }}%</div>
-            <p><b>Suggestions:</b></p>
-            <div class="suggestions">{{ result.suggestions }}</div>
-        </div>
-
-        {% elif last_result %}
-        <div class="result-box">
-            <h3>Last Result</h3>
-            <div class="score">{{ last_result.match_score }}%</div>
-            <p><b>Suggestions:</b></p>
-            <div class="suggestions">{{ last_result.suggestions }}</div>
-        </div>
-
-        {% endif %}
-    </div>
+      fileMsg.className = "msg success";
+      fileMsg.innerText = "✔ File selected: " + file.name;
+    });
+  </script>
 
 </body>
 </html>
