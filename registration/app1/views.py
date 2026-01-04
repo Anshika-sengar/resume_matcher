@@ -8,190 +8,193 @@ from .models import ResumeMatch
 
 import PyPDF2
 import re
+import os
+import uuid
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# For image conversion
 from pdf2image import convert_from_path
 from docx2pdf import convert
-import os
-
-# Folder where images will be stored
-RESUME_IMG_DIR = "media/resume_images/"
-
-# Your correct Poppler path
-POPPLER_PATH = r"C:\Users\IPCC\Downloads\Release-25.11.0-0\poppler-25.11.0\Library\bin"
 
 
-# =============================================================
-# SIGNUP
-# =============================================================
+# ================================================================
+# CONFIG
+# ================================================================
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MEDIA_DIR = os.path.join(BASE_DIR, "media")
+RESUME_IMG_DIR = os.path.join(MEDIA_DIR, "resume_images")
+
+# Retrieve POPPLER_PATH from environment variables for deployment
+POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\poppler\Library\bin")  # Local (Windows) or Update for production environment
+
+
+# ================================================================
+# AUTH FUNCTIONS
+# ================================================================
 def SignUpPage(request):
     if request.method == 'POST':
-        uname = request.POST.get('username')
-        email = request.POST.get('email')
-        pass1 = request.POST.get('password1')
-        pass2 = request.POST.get('password2')
-
-        if pass1 != pass2:
+        if request.POST.get('password1') != request.POST.get('password2'):
             return HttpResponse("Passwords do not match")
 
-        User.objects.create_user(uname, email, pass1)
+        User.objects.create_user(
+            request.POST.get('username'),
+            request.POST.get('email'),
+            request.POST.get('password1')
+        )
         return redirect('login')
 
     return render(request, 'signup.html')
 
 
-# =============================================================
-# LOGIN
-# =============================================================
 def LoginPage(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        pass1 = request.POST.get('pass')
-
-        user = authenticate(request, username=username, password=pass1)
+        user = authenticate(
+            request,
+            username=request.POST.get('username'),
+            password=request.POST.get('pass')
+        )
         if user:
             login(request, user)
             return redirect('home')
-        else:
-            return HttpResponse("Invalid credentials")
+
+        return HttpResponse("Invalid credentials")
 
     return render(request, 'login.html')
 
 
-# =============================================================
-# LOGOUT
-# =============================================================
 def LogoutPage(request):
     logout(request)
     return redirect('login')
 
 
-# =============================================================
-# EXTRACT TEXT FROM PDF
-# =============================================================
+# ================================================================
+# PDF TEXT EXTRACTION
+# ================================================================
 def extract_text_from_pdf(file_obj):
     try:
         reader = PyPDF2.PdfReader(file_obj)
-        text_pages = []
-        for page in reader.pages:
-            txt = page.extract_text()
-            if txt:
-                text_pages.append(txt)
-        return "\n".join(text_pages)
-    except:
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as e:
+        print("PDF TEXT EXTRACTION ERROR:", e)
         return ""
 
 
-# =============================================================
-# CLEAN TOKENS
-# =============================================================
+# ================================================================
+# MATCH SCORE LOGIC
+# ================================================================
 def token_set(text):
-    tokens = re.findall(r'\b[a-zA-Z0-9\-]+\b', text.lower())
-    return set([t for t in tokens if len(t) > 2])
+    return {
+        t for t in re.findall(r'\b[a-zA-Z0-9\-]+\b', text.lower())
+        if len(t) > 2
+    }
 
 
-# =============================================================
-# MATCH SCORE + SUGGESTIONS
-# =============================================================
 def compute_score(resume_text, jd_text):
     try:
-        vectorizer = TfidfVectorizer(stop_words='english')
-        tfidf = vectorizer.fit_transform([resume_text, jd_text])
-        similarity = cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0]
-        score = round(similarity * 100, 2)
-    except:
+        tfidf = TfidfVectorizer(stop_words='english').fit_transform(
+            [resume_text, jd_text]
+        )
+        score = round(
+            cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0] * 100, 2
+        )
+    except Exception:
         score = 0
 
-    resume_tokens = token_set(resume_text)
-    jd_tokens = token_set(jd_text)
-    missing = jd_tokens - resume_tokens
-
-    suggestions = ", ".join(list(missing)[:12])
-    if not suggestions:
-        suggestions = "No missing keywords."
-
-    return score, suggestions
+    missing = token_set(jd_text) - token_set(resume_text)
+    return score, ", ".join(list(missing)[:12]) or "No missing keywords."
 
 
-# =============================================================
-# RESUME → IMAGE (PDF + DOC/DOCX)
-# =============================================================
+# ================================================================
+# CONVERT RESUME TO IMAGE (DEPLOYMENT SAFE)
+# ================================================================
 def convert_resume_to_images(file_path):
 
-    ext = file_path.split(".")[-1].lower()
-
-    # Create folder if not exist
     os.makedirs(RESUME_IMG_DIR, exist_ok=True)
+    file_path = os.path.abspath(file_path)
 
-    # If resume is DOC/DOCX → convert to PDF first
-    if ext in ["doc", "docx"]:
-        pdf_path = file_path.replace(ext, "pdf")
+    # DOC/DOCX → PDF (Conversion)
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in ['.doc', '.docx']:
+        pdf_path = file_path.replace(ext, '.pdf')
         convert(file_path, pdf_path)
         file_path = pdf_path
 
-    # Convert PDF to image
-    pages = convert_from_path(file_path, dpi=160, poppler_path=POPPLER_PATH)
+    image_urls = []
 
-    image_paths = []
+    try:
+        # Convert PDF to Image (Using Poppler Path for PDF extraction)
+        pages = convert_from_path(
+            file_path,
+            poppler_path=POPPLER_PATH,
+            dpi=150,
+            fmt="jpeg",
+            use_pdftocairo=True,
+            first_page=1,
+            last_page=1
+        )
 
-    for i, page in enumerate(pages):
-        image_filename = f"resume_page_{i+1}.jpg"
-        saved_path = os.path.join(RESUME_IMG_DIR, image_filename)
+        # Save each page as an image
+        for page in pages:
+            filename = f"resume_{uuid.uuid4().hex}.jpg"
+            save_path = os.path.join(RESUME_IMG_DIR, filename)
+            page.save(save_path, "JPEG")
 
-        # Save the image
-        page.save(saved_path, "JPEG")
+            image_urls.append(f"/media/resume_images/{filename}")
+            print("IMAGE SAVED:", save_path)
 
-        # URL path to show in HTML
-        image_paths.append(f"/media/resume_images/{image_filename}")
+    except Exception as e:
+        print("PDF to Image ERROR:", e)
 
-    return image_paths
+    return image_urls
 
 
-# =============================================================
-# HOME PAGE (MAIN FUNCTION)
-# =============================================================
+# ================================================================
+# HOME PAGE FUNCTION
+# ================================================================
 @login_required(login_url='login')
 def HomePage(request):
 
     if request.method == 'POST':
         form = ResumeMatchForm(request.POST, request.FILES)
-
         if form.is_valid():
 
-            # SAVE resume file first
+            # Save uploaded resume as PDF
             resume_file = request.FILES['resume_file']
-            saved_path = f"media/{resume_file.name}"
+            saved_pdf = os.path.join(
+                MEDIA_DIR,
+                f"resume_{uuid.uuid4().hex}.pdf"
+            )
 
-            with open(saved_path, "wb+") as dest:
+            with open(saved_pdf, "wb+") as f:
                 for chunk in resume_file.chunks():
-                    dest.write(chunk)
+                    f.write(chunk)
 
-            # Extract text
-            resume_text = extract_text_from_pdf(open(saved_path, "rb"))
-            jd_text = form.cleaned_data['job_description']
+            # Extract text from the saved PDF
+            with open(saved_pdf, "rb") as f:
+                resume_text = extract_text_from_pdf(f)
 
-            # Compute match & suggestions
-            score, suggestions = compute_score(resume_text, jd_text)
+            # Compute match score with the job description
+            score, suggestions = compute_score(
+                resume_text,
+                form.cleaned_data['job_description']
+            )
 
-            # Save result into DB
+            # Save match details
             match = form.save(commit=False)
             match.user = request.user
             match.match_score = score
             match.suggestions = suggestions
             match.save()
 
-            # Convert file to images
-            image_list = convert_resume_to_images(saved_path)
+            # Convert the saved resume to images
+            images = convert_resume_to_images(saved_pdf)
+            print("IMAGES:", images)
 
             return render(request, "home.html", {
                 "form": ResumeMatchForm(),
                 "result": match,
-                "images": image_list
+                "images": images
             })
-
-        else:
-            return render(request, "home.html", {"form": ResumeMatchForm()})
 
     return render(request, "home.html", {"form": ResumeMatchForm()})

@@ -7,17 +7,17 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Default page → Login page
-    path('', views.LoginPage, name='login'),
-
     # Auth pages
     path('signup/', views.SignUpPage, name='signup'),
-    path('login/', views.LoginPage, name='login'),
     path('logout/', views.LogoutPage, name='logout'),
 
     # Home page after login
     path('home/', views.HomePage, name='home'),
+
+    # Default page → Login page
+    path('', views.LoginPage, name='login'),
 ]
 
+# Media files serving in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
