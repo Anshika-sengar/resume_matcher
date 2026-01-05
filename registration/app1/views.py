@@ -10,12 +10,12 @@ import PyPDF2
 import re
 import os
 import uuid
+import platform
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from pdf2image import convert_from_path
-from docx2pdf import convert
 
 
 # ================================================================
@@ -25,8 +25,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEDIA_DIR = os.path.join(BASE_DIR, "media")
 RESUME_IMG_DIR = os.path.join(MEDIA_DIR, "resume_images")
 
-# Retrieve POPPLER_PATH from environment variables for deployment
-POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\poppler\Library\bin")  # Local (Windows) or Update for production environment
+# Poppler path:
+# - Windows: set locally
+# - Linux (Render): Poppler is already installed, so keep None
+POPPLER_PATH = os.getenv("POPPLER_PATH")
+if POPPLER_PATH == "":
+    POPPLER_PATH = None
 
 
 # ================================================================
@@ -106,51 +110,38 @@ def compute_score(resume_text, jd_text):
 
 
 # ================================================================
-# CONVERT RESUME TO IMAGE (DEPLOYMENT SAFE)
+# CONVERT PDF RESUME TO IMAGE (RENDER SAFE)
 # ================================================================
 def convert_resume_to_images(file_path):
-
     os.makedirs(RESUME_IMG_DIR, exist_ok=True)
     file_path = os.path.abspath(file_path)
-
-    # DOC/DOCX → PDF (Conversion)
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext in ['.doc', '.docx']:
-        pdf_path = file_path.replace(ext, '.pdf')
-        convert(file_path, pdf_path)
-        file_path = pdf_path
 
     image_urls = []
 
     try:
-        # Convert PDF to Image (Using Poppler Path for PDF extraction)
         pages = convert_from_path(
             file_path,
-            poppler_path=POPPLER_PATH,
             dpi=150,
             fmt="jpeg",
-            use_pdftocairo=True,
+            poppler_path=POPPLER_PATH,
             first_page=1,
             last_page=1
         )
 
-        # Save each page as an image
         for page in pages:
             filename = f"resume_{uuid.uuid4().hex}.jpg"
             save_path = os.path.join(RESUME_IMG_DIR, filename)
             page.save(save_path, "JPEG")
-
             image_urls.append(f"/media/resume_images/{filename}")
-            print("IMAGE SAVED:", save_path)
 
     except Exception as e:
-        print("PDF to Image ERROR:", e)
+        print("PDF → IMAGE ERROR:", e)
 
     return image_urls
 
 
 # ================================================================
-# HOME PAGE FUNCTION
+# HOME PAGE
 # ================================================================
 @login_required(login_url='login')
 def HomePage(request):
@@ -159,8 +150,12 @@ def HomePage(request):
         form = ResumeMatchForm(request.POST, request.FILES)
         if form.is_valid():
 
-            # Save uploaded resume as PDF
             resume_file = request.FILES['resume_file']
+
+            # Only allow PDF on production
+            if not resume_file.name.lower().endswith(".pdf"):
+                return HttpResponse("Please upload PDF files only.")
+
             saved_pdf = os.path.join(
                 MEDIA_DIR,
                 f"resume_{uuid.uuid4().hex}.pdf"
@@ -170,26 +165,21 @@ def HomePage(request):
                 for chunk in resume_file.chunks():
                     f.write(chunk)
 
-            # Extract text from the saved PDF
             with open(saved_pdf, "rb") as f:
                 resume_text = extract_text_from_pdf(f)
 
-            # Compute match score with the job description
             score, suggestions = compute_score(
                 resume_text,
                 form.cleaned_data['job_description']
             )
 
-            # Save match details
             match = form.save(commit=False)
             match.user = request.user
             match.match_score = score
             match.suggestions = suggestions
             match.save()
 
-            # Convert the saved resume to images
             images = convert_resume_to_images(saved_pdf)
-            print("IMAGES:", images)
 
             return render(request, "home.html", {
                 "form": ResumeMatchForm(),
